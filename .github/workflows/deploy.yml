@@ -40,13 +40,15 @@ jobs:
           docker run -d -p 5000:5000 --name windcore-test ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           sleep 15
           curl -f http://localhost:5000/health
+          docker stop windcore-test
+          docker rm windcore-test
 
       - name: Push Docker image
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Deploy exact image to Azure Web App
+      - name: Deploy new image to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.WEBAPP_NAME }}
