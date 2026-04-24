@@ -18,3 +18,6 @@ Koer:
 
 Aabn:
   http://localhost:5000
+
+
+FIk det squ til at virke 
