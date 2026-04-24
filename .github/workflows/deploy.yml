@@ -1,4 +1,4 @@
-name: Test and Deploy WindCore
+name: Test and Push WindCore Image
 
 on:
   push:
@@ -9,10 +9,9 @@ on:
 env:
   REGISTRY: windcoreregistry.azurecr.io
   IMAGE_NAME: windcore
-  WEBAPP_NAME: windcoreregistry
 
 jobs:
-  test-build-and-deploy:
+  test-build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,12 +31,11 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build --no-cache -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker build --no-cache -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
 
       - name: Test container starts
         run: |
-          docker run -d -p 5000:5000 --name windcore-test ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker run -d -p 5000:5000 --name windcore-test ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           sleep 15
           curl -f http://localhost:5000/health
           docker stop windcore-test
@@ -45,12 +43,4 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Deploy new image to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
