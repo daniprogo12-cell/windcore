@@ -1,0 +1,17 @@
+Start docker på din pc
+
+Åben den her mappe i VScode
+
+Åbn terminal i VScode
+
+skriv 
+docker buildx build -t windcore-fixed . --load
+
+Efter
+docker run -p 5000:5000 windcore-fixed
+
+
+Åbn
+http://localhost:5000
+
+det virker kun hvis du er inde i mappen i VScode

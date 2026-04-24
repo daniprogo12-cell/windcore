@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WindCore Live</title>
+    <style>
+        :root {
+            --bg: #0f1113;
+            --card-bg: #1e2124;
+            --primary: #00d1b2;
+            --danger: #ff3860;
+            --warning: #ffdd57;
+            --critical: #ff8c00;
+            --cooling: #3498db;
+            --restarting: #2ecc71;
+            --muted: #95a5a6;
+            --text: #f5f5f5;
+            --park-header: #2d3238;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .park-title {
+            grid-column: 1 / -1;
+            background: var(--park-header);
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-left: 5px solid var(--primary);
+            flex-wrap: wrap;
+        }
+
+        .park-total {
+            color: var(--primary);
+            font-family: monospace;
+            font-size: 1.05em;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border-top: 4px solid var(--primary);
+            position: relative;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        }
+
+        .health-warning { border-top-color: var(--warning); }
+        .health-critical { border-top-color: var(--critical); }
+        .health-cooling { border-top-color: var(--cooling); }
+        .health-restarting { border-top-color: var(--restarting); }
+        .health-initializing { border-top-color: var(--muted); }
+        .health-healthy { border-top-color: var(--primary); }
+
+        .status-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            border-bottom: 1px solid #333;
+            padding-bottom: 6px;
+            gap: 12px;
+        }
+
+        .label {
+            color: #aaa;
+            font-size: 0.9em;
+        }
+
+        .val {
+            font-family: monospace;
+            color: var(--primary);
+            font-size: 1.05em;
+            text-align: right;
+        }
+
+        .info-box {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid #333;
+            font-size: 0.9em;
+        }
+
+        .warning-box {
+            background: rgba(255, 140, 0, 0.15);
+            border-color: var(--critical);
+            color: var(--critical);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #aaa;
+            grid-column: 1 / -1;
+        }
+
+        .subtle {
+            color: #888;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1 style="margin:0;">WindCore Live</h1>
+            <p style="margin:4px 0 0 0; color:#888;">
+                Dashboard laeser SQL via API. Predictive maintenance bruger live buffer i API'et.
+            </p>
+        </div>
+        <div id="connection-status">Forbinder...</div>
+    </header>
+
+    <div id="dashboard" class="grid">
+        <div class="loading">Henter data...</div>
+    </div>
+
+    <script>
+        function normalizeStatus(status) {
+            return String(status || "").toUpperCase();
+        }
+
+        function getBadgeConfig(health, status) {
+            if (health === "CRITICAL") return { text: "KRITISK", color: "var(--critical)" };
+            if (health === "WARNING") return { text: "ADVARSEL", color: "var(--warning)", textColor: "#000" };
+            if (health === "COOLING") return { text: "KOLER AF", color: "var(--cooling)" };
+            if (health === "RESTARTING") return { text: "RESTARTER", color: "var(--restarting)" };
+            if (health === "INITIALIZING") return { text: "INITIALISERER", color: "var(--muted)" };
+            if (status === "STOPPED") return { text: "STOPPET", color: "#666" };
+            return { text: "KORER", color: "var(--primary)" };
+        }
+
+        function formatNumber(value, fallback = 0) {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : fallback;
+        }
+
+        async function updateDashboard() {
+            const connStatus = document.getElementById("connection-status");
+            const container = document.getElementById("dashboard");
+
+            try {
+                const response = await fetch("/api/status?t=" + Date.now(), {
+                    method: "GET",
+                    cache: "no-store",
+                    headers: {
+                        "Cache-Control": "no-cache"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error("API fejl (" + response.status + ")");
+                }
+
+                const data = await response.json();
+
+                const nowText = new Date().toLocaleTimeString("da-DK");
+                connStatus.textContent = "System online · opdateret " + nowText;
+                connStatus.style.color = "var(--primary)";
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    container.innerHTML = '<div class="loading">Ingen SQL-data endnu.</div>';
+                    return;
+                }
+
+                const parks = {};
+                data.forEach(function(item) {
+                    const park = item.park || "Ukendt";
+                    if (!parks[park]) {
+                        parks[park] = [];
+                    }
+                    parks[park].push(item);
+                });
+
+                let html = "";
+
+                Object.entries(parks).forEach(function(entry) {
+                    const parkName = entry[0];
+                    const turbines = entry[1];
+
+                    const parkKwTotal = turbines.reduce(function(sum, turbine) {
+                        return sum + formatNumber(turbine.kw);
+                    }, 0);
+
+                    html += `
+                        <div class="park-title">
+                            <div><strong>${parkName}</strong> <span class="subtle">(${turbines.length} enheder)</span></div>
+                            <div class="park-total">${parkKwTotal.toFixed(1)} kW</div>
+                        </div>
+                    `;
+
+                    turbines.forEach(function(turbine) {
+                        const health = String(turbine.health_status || "HEALTHY").toUpperCase();
+                        const status = normalizeStatus(turbine.status || "RUNNING");
+                        const badge = getBadgeConfig(health, status);
+
+                        const rpm = formatNumber(turbine.rpm);
+                        const temp = formatNumber(turbine.temp);
+                        const kw = formatNumber(turbine.kw);
+                        const avgTemp = formatNumber(turbine.avg_temp);
+                        const avgKw = formatNumber(turbine.avg_kw);
+                        const ttf = formatNumber(turbine.time_to_failure, 999);
+                        const timestamp = turbine.timestamp || "Ukendt";
+
+                        const warningClass = (health === "WARNING" || health === "CRITICAL") ? "warning-box" : "";
+
+                        html += `
+                            <div class="card health-${health.toLowerCase()}">
+                                <div class="status-badge" style="background:${badge.color}; color:${badge.textColor || "#fff"};">
+                                    ${badge.text}
+                                </div>
+
+                                <h3 style="margin-top:0;">${turbine.id || "Ukendt ID"}</h3>
+
+                                <div class="data-row"><span class="label">Effekt</span><span class="val">${kw.toFixed(1)} kW</span></div>
+                                <div class="data-row"><span class="label">Temperatur</span><span class="val">${temp.toFixed(1)} C</span></div>
+                                <div class="data-row"><span class="label">RPM</span><span class="val">${rpm.toFixed(1)}</span></div>
+                                <div class="data-row"><span class="label">Gns. temp</span><span class="val">${avgTemp.toFixed(1)} C</span></div>
+                                <div class="data-row"><span class="label">Gns. effekt</span><span class="val">${avgKw.toFixed(1)} kW</span></div>
+                                <div class="data-row"><span class="label">Seneste SQL-tid</span><span class="val">${timestamp}</span></div>
+
+                                <div class="info-box ${warningClass}">
+                                    <div><strong>Health:</strong> ${health}</div>
+                                    <div><strong>TTF:</strong> ${ttf.toFixed(1)} ticks</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                });
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error("Dashboard fejl:", error);
+                connStatus.textContent = "Offline";
+                connStatus.style.color = "var(--danger)";
+                container.innerHTML = '<div class="loading">Kunne ikke hente data: ' + error.message + '</div>';
+            }
+        }
+
+        setInterval(updateDashboard, 1500);
+        updateDashboard();
+    </script>
+</body>
+</html>

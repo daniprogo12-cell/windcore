@@ -1,0 +1,20 @@
+Det her er din originale stack med kun de noedvendige rettelser:
+
+1) Dashboard-fix:
+   data_manager.py vaelger nu seneste record mere stabilt.
+   Hvis tabellen har kolonnen Id, bruges ORDER BY Id DESC.
+   Ellers bruges Timestamp DESC som fallback.
+
+2) Timestamp-fix:
+   simulation_service.py sender nu timestamp med mikrosekunder.
+   data_manager.py parser timestamp robust.
+
+3) Template-fix:
+   index.html ligger ogsaa i templates/index.html, saa Flask kan finde dashboardet via render_template("index.html").
+
+Koer:
+  docker buildx build -t windcore-fixed . --load
+  docker run -p 5000:5000 windcore-fixed
+
+Aabn:
+  http://localhost:5000

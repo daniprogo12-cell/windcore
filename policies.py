@@ -1,0 +1,19 @@
+# --- Park Belastningsregler ---
+MAX_PARK_POWER_KW = 700.0
+RESTART_THRESHOLD_KW = 100.0
+
+# --- Turbine Grænser ---
+CRITICAL_AVG_TEMP = 80.0
+MAX_TEMP_ALLOWED = 75.0
+SAFE_RESTART_TEMP = 40.0
+
+# --- Status ---
+STATUS_RUNNING = "RUNNING"
+STATUS_STOPPED = "STOPPED"
+
+# --- System Timing ---
+SIMULATION_INTERVAL = 1
+HISTORY_WINDOW = 15
+
+# --- RPM ---
+SAFE_RPM_RANGE = (90.0, 140.0)
