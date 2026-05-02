@@ -7,7 +7,9 @@ CONN_STR = (
     "Server=localhost\\SQLEXPRESS;"
     "Database=TurbineDB;"
     "Trusted_Connection=yes;"
+    "Encrypt=no;"
     "TrustServerCertificate=yes;"
+    "Connection Timeout=5;"
 )
 
 
