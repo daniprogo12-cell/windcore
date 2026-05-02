@@ -4,13 +4,10 @@ import pyodbc
 
 CONN_STR = (
     "Driver={ODBC Driver 18 for SQL Server};"
-    "Server=tcp:hiphopgruppe18.database.windows.net,1433;"
-    "Database=free-sql-db-5285113;"
-    "Uid=CloudSA687a4c06;"
-    "Pwd=Admin12345;"
-    "Encrypt=yes;"
+    "Server=localhost\\SQLEXPRESS;"
+    "Database=TurbineDB;"
+    "Trusted_Connection=yes;"
     "TrustServerCertificate=yes;"
-    "Connection Timeout=30;"
 )
 
 
